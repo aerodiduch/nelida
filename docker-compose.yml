@@ -1,4 +1,4 @@
-version: '3.3'
+version: '3.8'
 
 services:
   nelida-assistant:
@@ -31,9 +31,15 @@ services:
         max-size: "50m"
         max-file: "3"
         
-    # Configuración de memoria y CPU (opcional)
-    mem_limit: 512m
-    cpus: 1.0
+    # Configuración de memoria y CPU
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
           
     # Configuración de red (opcional para debugging)
     networks:

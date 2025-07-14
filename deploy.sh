@@ -40,8 +40,14 @@ check_requirements() {
         exit 1
     fi
 
-    if ! command -v docker-compose &> /dev/null; then
-        echo -e "${RED}❌ Docker Compose no está instalado${NC}"
+    if ! command -v docker &> /dev/null; then
+        echo -e "${RED}❌ Docker no está instalado${NC}"
+        exit 1
+    fi
+    
+    # Verificar Docker Compose (v2 usa 'docker compose')
+    if ! docker compose version &> /dev/null; then
+        echo -e "${RED}❌ Docker Compose no está disponible${NC}"
         exit 1
     fi
 }
@@ -66,8 +72,8 @@ start_bot() {
     # Crear directorios si no existen
     mkdir -p data logs
     
-    # Iniciar con docker-compose
-    docker-compose up -d
+    # Iniciar con docker compose
+    docker compose up -d
     
     echo -e "${GREEN}✅ Bot iniciado exitosamente${NC}"
     echo -e "${BLUE}📊 Para ver logs: ./deploy.sh logs${NC}"
@@ -76,7 +82,7 @@ start_bot() {
 # Función para detener el bot
 stop_bot() {
     echo -e "${YELLOW}⏹️  Deteniendo Nelida Assistant...${NC}"
-    docker-compose down
+    docker compose down
     echo -e "${GREEN}✅ Bot detenido${NC}"
 }
 
@@ -92,7 +98,7 @@ restart_bot() {
 show_logs() {
     echo -e "${BLUE}📋 Mostrando logs de Nelida Assistant...${NC}"
     echo -e "${YELLOW}Presiona Ctrl+C para salir${NC}"
-    docker-compose logs -f $PROJECT_NAME
+    docker compose logs -f $PROJECT_NAME
 }
 
 # Función para mostrar estado
@@ -101,14 +107,14 @@ show_status() {
     echo ""
     
     # Estado del container
-    if docker-compose ps | grep -q "Up"; then
+    if docker compose ps | grep -q "Up"; then
         echo -e "${GREEN}🟢 Estado: EJECUTÁNDOSE${NC}"
     else
         echo -e "${RED}🔴 Estado: DETENIDO${NC}"
     fi
     
     # Información del container
-    docker-compose ps
+    docker compose ps
     
     echo ""
     echo -e "${BLUE}📁 Archivos de datos:${NC}"
@@ -122,7 +128,7 @@ show_status() {
 # Función para reconstruir imagen
 build_image() {
     echo -e "${BLUE}🔨 Reconstruyendo imagen Docker...${NC}"
-    docker-compose build --no-cache
+    docker compose build --no-cache
     echo -e "${GREEN}✅ Imagen reconstruida${NC}"
 }
 
@@ -150,7 +156,7 @@ setup_project() {
     
     # Construir imagen
     echo -e "${BLUE}🔨 Construyendo imagen Docker...${NC}"
-    docker-compose build
+    docker compose build
     
     echo -e "${GREEN}✅ Configuración inicial completada${NC}"
     echo -e "${BLUE}🚀 Para iniciar: ./deploy.sh start${NC}"
