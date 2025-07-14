@@ -1,0 +1,34 @@
+# Bot de Telegram
+python-telegram-bot==20.3
+
+# OpenAI API
+openai==1.51.2
+
+# Base de datos
+SQLAlchemy==2.0.23
+
+# Utilidades
+python-dotenv==1.0.0
+requests==2.31.0
+schedule==1.2.1
+
+# APIs de Google
+google-auth==2.25.2
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+google-api-python-client==2.111.0
+
+
+# Logging y debugging
+loguru==0.7.2
+
+# Fecha y hora
+pytz==2023.3
+
+# Búsquedas web
+google-api-python-client==2.111.0
+beautifulsoup4==4.12.2
+
+# RSS Feeds
+fastfeedparser==0.3.0
+feedparser==6.0.10
