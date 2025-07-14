@@ -134,6 +134,31 @@ class AlternativeSearchClient:
 google_client = GoogleSearchClient()
 alternative_client = AlternativeSearchClient()
 
+def _should_trigger_search(text: str) -> bool:
+    """
+    Determina si el texto contiene keywords específicos para búsqueda
+    
+    Args:
+        text: Texto del usuario a analizar
+        
+    Returns:
+        True si contiene keywords de búsqueda, False para texto suelto
+    """
+    search_keywords = [
+        "buscame", "averiguame", "buscar en internet", "googlear",
+        "investigá", "consultá", "mirá en google", "qué dice internet",
+        "información sobre", "busca información", "busca datos",
+        "qué hay sobre", "conseguime información", "investigame"
+    ]
+    
+    text_lower = text.lower().strip()
+    
+    for keyword in search_keywords:
+        if keyword in text_lower:
+            return True
+    
+    return False
+
 async def buscar_en_internet(query: str, num_resultados: int = 5, user_id: int = None) -> Dict[str, Any]:
     """
     Buscar información en internet
@@ -300,7 +325,7 @@ BUSQUEDA_FUNCTIONS = {
         "type": "function",
         "function": {
             "name": "buscar_en_internet",
-            "description": "Buscar información en internet usando Google. Usar cuando el usuario pida 'buscar', 'googlear', 'investigar', 'qué hay sobre', etc.",
+            "description": "Buscar información en internet usando Google. SOLO usar cuando el usuario incluya palabras específicas de búsqueda como: 'buscame', 'averiguame', 'buscar en internet', 'googlear', 'investigá', 'consultá', 'mirá en google', 'qué dice internet sobre', 'información sobre'. NO usar para texto suelto o anotaciones.",
             "parameters": {
                 "type": "object",
                 "properties": {

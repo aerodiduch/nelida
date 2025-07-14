@@ -72,6 +72,11 @@ start_bot() {
     # Crear directorios si no existen
     mkdir -p data logs
     
+    # Arreglar permisos para el usuario del container (UID 1000)
+    echo -e "${BLUE}🔧 Configurando permisos de directorios...${NC}"
+    chown -R 1000:1000 data/ logs/ 2>/dev/null || true
+    chmod -R 755 data/ logs/ 2>/dev/null || true
+    
     # Iniciar con docker compose
     docker compose up -d
     
@@ -141,6 +146,12 @@ setup_project() {
     # Crear directorios
     mkdir -p data logs
     echo -e "${GREEN}✅ Directorios creados${NC}"
+    
+    # Configurar permisos correctos
+    echo -e "${BLUE}🔧 Configurando permisos...${NC}"
+    chown -R 1000:1000 data/ logs/ 2>/dev/null || true
+    chmod -R 755 data/ logs/ 2>/dev/null || true
+    echo -e "${GREEN}✅ Permisos configurados${NC}"
     
     # Verificar archivo .env
     if [ ! -f ".env" ]; then

@@ -27,6 +27,7 @@ from src.functions.busquedas import buscar_en_internet, obtener_contenido_pagina
 from src.functions.fecha_tiempo import obtener_fecha_actual, FECHA_FUNCTIONS
 from src.functions.rss_feeds import obtener_noticias_hoy, obtener_noticias_categoria, RSS_FUNCTIONS
 from src.functions.tareas import crear_tarea, crear_tareas_multiples, listar_tareas, completar_tareas_multiples, buscar_tareas, TAREA_FUNCTIONS
+from src.functions.notas import crear_nota, listar_notas, buscar_notas, eliminar_nota, NOTA_FUNCTIONS
 from src.functions.notificaciones import NotificationScheduler
 
 class NelidaBot:
@@ -93,7 +94,13 @@ class NelidaBot:
         self.ai.register_function("completar_tareas_multiples", completar_tareas_multiples, TAREA_FUNCTIONS["completar_tareas_multiples"])
         self.ai.register_function("buscar_tareas", buscar_tareas, TAREA_FUNCTIONS["buscar_tareas"])
         
-        logger.info("Funciones de recordatorios, búsquedas, fecha/tiempo, RSS y tareas registradas para Nélida")
+        # Registrar funciones de notas
+        self.ai.register_function("crear_nota", crear_nota, NOTA_FUNCTIONS["crear_nota"])
+        self.ai.register_function("listar_notas", listar_notas, NOTA_FUNCTIONS["listar_notas"])
+        self.ai.register_function("buscar_notas", buscar_notas, NOTA_FUNCTIONS["buscar_notas"])
+        self.ai.register_function("eliminar_nota", eliminar_nota, NOTA_FUNCTIONS["eliminar_nota"])
+        
+        logger.info("Funciones de recordatorios, búsquedas, fecha/tiempo, RSS, tareas y notas registradas para Nélida")
     
     def should_use_ai(self, message: str) -> bool:
         """
@@ -313,6 +320,13 @@ Por ahora puedes:
 • "¿Qué tareas tengo pendientes?"
 • "Ya llamé al médico y también compré leche" → marca múltiples como completadas
 • "Mis pendientes de trabajo" → filtra por categoría
+
+📝 <b>¡NUEVO! Sistema de Notas:</b>
+• "Apuntá que Juan trabaja en Marketing" → guarda información suelta
+• "Recordá que la reunión es los martes"
+• "¿Qué notas tengo guardadas?"
+• "Buscá mis notas sobre proyectos"
+• "Eliminá la nota 3"
 
 📋 <b>Recordatorios manuales (aún funcionan):</b>
 • <code>crear: llamar al médico mañana</code> - Crear recordatorio

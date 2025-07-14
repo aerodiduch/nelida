@@ -57,12 +57,13 @@ Limita tus respuesta a un par de oraciones únicamente. Sos una persona que es d
             use_personality: Si usar personalidad de Nelida o prompt neutro
         """
         try:
-            # Inicializar historial si no existe
-            if user_id not in self.conversation_history:
+            # Inicializar historial si no existe o está corrupto
+            if user_id not in self.conversation_history or self._is_history_corrupted(user_id):
                 system_prompt = self.base_personality if (use_personality and self.base_personality) else self.neutral_prompt
                 self.conversation_history[user_id] = [
                     {"role": "system", "content": system_prompt}
                 ]
+                logger.info(f"Historial inicializado/reiniciado para usuario {user_id}")
             
             # Agregar mensaje del usuario
             self.conversation_history[user_id].append({
@@ -154,7 +155,67 @@ Limita tus respuesta a un par de oraciones únicamente. Sos una persona que es d
             
         except Exception as e:
             logger.error(f"Error en OpenAI con function calling: {e}")
+            # Si es error de tool roles, limpiar historial y reintentar una vez
+            if "tool" in str(e).lower() and "role" in str(e).lower():
+                logger.warning(f"Detectado error de roles, limpiando historial para usuario {user_id}")
+                if user_id in self.conversation_history:
+                    del self.conversation_history[user_id]
+                # No reintentar automáticamente para evitar loops
             return "Ay, nene, tuve un quilombo técnico. ¿Me lo repetís?"
+    
+    def _is_history_corrupted(self, user_id: int) -> bool:
+        """
+        Verifica si el historial de conversación está corrupto
+        
+        Args:
+            user_id: ID del usuario a verificar
+        
+        Returns:
+            True si el historial está corrupto, False si está bien
+        """
+        if user_id not in self.conversation_history:
+            return False
+            
+        history = self.conversation_history[user_id]
+        
+        # Verificar estructura básica
+        if not history or len(history) == 0:
+            return True
+        
+        # Verificar que el primer mensaje sea system
+        if history[0].get("role") != "system":
+            logger.warning(f"Historial corrupto: primer mensaje no es system para usuario {user_id}")
+            return True
+        
+        # Verificar secuencia de tool calls y tool responses
+        tool_call_pending = False
+        for i, message in enumerate(history):
+            role = message.get("role")
+            
+            # Si hay tool_calls, marcar que esperamos tool responses
+            if role == "assistant" and message.get("tool_calls"):
+                tool_call_pending = True
+                continue
+            
+            # Si encontramos tool response, verificar que haya tool_call previo
+            if role == "tool":
+                if not tool_call_pending:
+                    logger.warning(f"Historial corrupto: tool response sin tool_call previo en posición {i} para usuario {user_id}")
+                    return True
+                tool_call_pending = False
+                continue
+            
+            # Reset tool_call_pending en otros casos
+            if role in ["user", "system"]:
+                tool_call_pending = False
+        
+        return False
+    
+    def clear_user_history(self, user_id: int):
+        """Limpia el historial de un usuario específico"""
+        if user_id in self.conversation_history:
+            del self.conversation_history[user_id]
+            logger.info(f"Historial limpiado para usuario {user_id}")
     
     def has_personality(self) -> bool:
         """Verifica si tiene personalidad configurada"""

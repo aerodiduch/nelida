@@ -91,6 +91,29 @@ class Database:
                 ON tareas(categoria)
             """)
             
+            # Tabla de notas (para anotaciones sueltas)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS notas (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    contenido TEXT NOT NULL,
+                    categoria TEXT DEFAULT 'general',
+                    user_id INTEGER NOT NULL,
+                    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    fecha_modificacion DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Índices para notas
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_notas_user_id 
+                ON notas(user_id)
+            """)
+            
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_notas_categoria 
+                ON notas(categoria)
+            """)
+            
             conn.commit()
             logger.info("Base de datos inicializada correctamente")
 
@@ -370,7 +393,114 @@ class Tarea:
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
 
+class Nota:
+    """Modelo para manejar notas/anotaciones"""
+    
+    def __init__(self, db: Database):
+        self.db = db
+    
+    def crear(self, contenido: str, user_id: int, categoria: str = 'general') -> int:
+        """
+        Crear una nueva nota
+        
+        Args:
+            contenido: Texto de la nota
+            user_id: ID del usuario
+            categoria: Categoría de la nota
+            
+        Returns:
+            ID de la nota creada
+        """
+        with self.db.get_connection() as conn:
+            cursor = conn.execute("""
+                INSERT INTO notas (contenido, categoria, user_id)
+                VALUES (?, ?, ?)
+            """, (contenido, categoria, user_id))
+            
+            nota_id = cursor.lastrowid
+            conn.commit()
+            
+            logger.info(f"Nota creada - ID: {nota_id}, Usuario: {user_id}")
+            return nota_id
+    
+    def listar_por_usuario(self, user_id: int, categoria: str = None) -> List[Dict[str, Any]]:
+        """
+        Listar notas de un usuario
+        
+        Args:
+            user_id: ID del usuario
+            categoria: Filtrar por categoría (opcional)
+            
+        Returns:
+            Lista de notas
+        """
+        with self.db.get_connection() as conn:
+            if categoria:
+                cursor = conn.execute("""
+                    SELECT * FROM notas 
+                    WHERE user_id = ? AND categoria = ?
+                    ORDER BY fecha_creacion DESC
+                """, (user_id, categoria))
+            else:
+                cursor = conn.execute("""
+                    SELECT * FROM notas 
+                    WHERE user_id = ?
+                    ORDER BY fecha_creacion DESC
+                """, (user_id,))
+            
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+    
+    def buscar_por_contenido(self, texto_busqueda: str, user_id: int) -> List[Dict[str, Any]]:
+        """
+        Buscar notas por contenido
+        
+        Args:
+            texto_busqueda: Texto a buscar
+            user_id: ID del usuario
+            
+        Returns:
+            Lista de notas que coinciden
+        """
+        with self.db.get_connection() as conn:
+            cursor = conn.execute("""
+                SELECT * FROM notas 
+                WHERE user_id = ? 
+                AND LOWER(contenido) LIKE LOWER(?)
+                ORDER BY fecha_creacion DESC
+            """, (user_id, f"%{texto_busqueda}%"))
+            
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+    
+    def eliminar(self, nota_id: int, user_id: int) -> bool:
+        """
+        Eliminar una nota
+        
+        Args:
+            nota_id: ID de la nota
+            user_id: ID del usuario (para verificar permisos)
+            
+        Returns:
+            True si se eliminó, False si no
+        """
+        with self.db.get_connection() as conn:
+            cursor = conn.execute("""
+                DELETE FROM notas 
+                WHERE id = ? AND user_id = ?
+            """, (nota_id, user_id))
+            
+            conn.commit()
+            
+            if cursor.rowcount > 0:
+                logger.info(f"Nota eliminada - ID: {nota_id}, Usuario: {user_id}")
+                return True
+            else:
+                logger.warning(f"No se pudo eliminar nota - ID: {nota_id}, Usuario: {user_id}")
+                return False
+
 # Instancia global de la base de datos
 database = Database()
 recordatorio_model = Recordatorio(database)
 tarea_model = Tarea(database)
+nota_model = Nota(database)

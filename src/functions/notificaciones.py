@@ -42,7 +42,8 @@ class NotificationScheduler:
         self.scheduler_thread = threading.Thread(target=self._run_scheduler, daemon=True)
         self.scheduler_thread.start()
         
-        logger.info("🕐 Scheduler de notificaciones iniciado")
+        logger.info(f"🕐 Scheduler de notificaciones iniciado - Programado para {self.notification_start} (admin: {self.admin_user_id})")
+        logger.info(f"📅 Próxima ejecución programada: {schedule.next_run()}")
     
     def stop(self):
         """Detener el scheduler"""
@@ -52,28 +53,43 @@ class NotificationScheduler:
     
     def _run_scheduler(self):
         """Ejecutar el scheduler en bucle"""
+        logger.info("🔄 Iniciando bucle del scheduler")
         while self.is_running:
             try:
+                pending_jobs = schedule.get_jobs()
+                if pending_jobs:
+                    # Solo log cada 10 minutos para no spam de logs
+                    if datetime.now().minute % 10 == 0:
+                        logger.debug(f"⏳ Scheduler activo - Próxima ejecución: {schedule.next_run()}")
+                
                 schedule.run_pending()
                 time.sleep(30)  # Verificar cada 30 segundos
             except Exception as e:
-                logger.error(f"Error en scheduler: {e}")
+                logger.error(f"❌ Error en scheduler: {e}")
                 time.sleep(60)  # En caso de error, esperar más tiempo
+        
+        logger.info("🛑 Bucle del scheduler terminado")
     
     def _send_daily_tasks_notification(self):
         """Enviar notificación diaria con tareas pendientes"""
         try:
+            logger.info("🔔 Iniciando proceso de notificación diaria")
+            
             # Verificar que estamos en el rango de tiempo correcto
             now = datetime.now()
             current_time = now.strftime('%H:%M')
+            
+            logger.info(f"⏰ Verificando horario: actual={current_time}, ventana={self.notification_start}-{self.notification_end}")
             
             start_time = datetime.strptime(self.notification_start, '%H:%M').time()
             end_time = datetime.strptime(self.notification_end, '%H:%M').time()
             current_time_obj = datetime.strptime(current_time, '%H:%M').time()
             
             if not (start_time <= current_time_obj <= end_time):
-                logger.info(f"Fuera del rango de notificación. Hora actual: {current_time}")
+                logger.info(f"⏸️ Fuera del rango de notificación. Hora actual: {current_time}")
                 return
+            
+            logger.info(f"✅ Dentro del rango horario. Procediendo con notificación para usuario {self.admin_user_id}")
             
             # Obtener tareas pendientes
             tareas_pendientes = tarea_model.listar_por_usuario(
@@ -81,16 +97,21 @@ class NotificationScheduler:
                 status="pendiente"
             )
             
+            logger.info(f"📋 Se encontraron {len(tareas_pendientes)} tareas pendientes")
+            
             # Crear mensaje
             mensaje = self._crear_mensaje_tareas_pendientes(tareas_pendientes)
+            
+            logger.info(f"📝 Mensaje preparado, enviando a usuario {self.admin_user_id}")
             
             # Enviar mensaje
             asyncio.run(self._send_message(mensaje))
             
-            logger.info(f"✅ Notificación de tareas enviada a las {current_time}")
+            logger.info(f"✅ Notificación de tareas enviada exitosamente a las {current_time}")
             
         except Exception as e:
-            logger.error(f"Error enviando notificación diaria: {e}")
+            logger.error(f"❌ Error enviando notificación diaria: {e}")
+            logger.error(f"🔍 Detalles del error: admin_user_id={self.admin_user_id}, hora={datetime.now()}")
     
     def _crear_mensaje_tareas_pendientes(self, tareas: list) -> str:
         """Crear mensaje con resumen de tareas pendientes"""
