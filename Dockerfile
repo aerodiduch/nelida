@@ -17,8 +17,8 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 # Etapa final - imagen mínima
 FROM python:3.11-slim
 
-# Crear usuario no-root para seguridad
-RUN groupadd -r nelida && useradd -r -g nelida nelida
+# Crear usuario no-root para seguridad con UID 1000
+RUN groupadd -r -g 1000 nelida && useradd -r -u 1000 -g nelida nelida
 
 # Instalar dependencias mínimas del sistema
 RUN apt-get update && apt-get install -y \
