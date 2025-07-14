@@ -72,10 +72,17 @@ start_bot() {
     # Crear directorios si no existen
     mkdir -p data logs
     
-    # Arreglar permisos para el usuario del container (UID 1000)
+    # SIEMPRE arreglar permisos (crítico para que funcione el bot)
     echo -e "${BLUE}🔧 Configurando permisos de directorios...${NC}"
-    chown -R 1000:1000 data/ logs/ 2>/dev/null || true
-    chmod -R 755 data/ logs/ 2>/dev/null || true
+    # Intentar con sudo primero, luego sin sudo como fallback
+    if command -v sudo >/dev/null 2>&1; then
+        sudo chown -R 1000:1000 data/ logs/ 2>/dev/null || chown -R 1000:1000 data/ logs/ 2>/dev/null || true
+        sudo chmod -R 755 data/ logs/ 2>/dev/null || chmod -R 755 data/ logs/ 2>/dev/null || true
+    else
+        chown -R 1000:1000 data/ logs/ 2>/dev/null || true
+        chmod -R 755 data/ logs/ 2>/dev/null || true
+    fi
+    echo -e "${GREEN}✅ Permisos configurados${NC}"
     
     # Iniciar con docker compose
     docker compose up -d
@@ -133,6 +140,19 @@ show_status() {
 # Función para reconstruir imagen
 build_image() {
     echo -e "${BLUE}🔨 Reconstruyendo imagen Docker...${NC}"
+    
+    # Crear directorios y arreglar permisos antes del build
+    mkdir -p data logs
+    echo -e "${BLUE}🔧 Configurando permisos de directorios...${NC}"
+    if command -v sudo >/dev/null 2>&1; then
+        sudo chown -R 1000:1000 data/ logs/ 2>/dev/null || chown -R 1000:1000 data/ logs/ 2>/dev/null || true
+        sudo chmod -R 755 data/ logs/ 2>/dev/null || chmod -R 755 data/ logs/ 2>/dev/null || true
+    else
+        chown -R 1000:1000 data/ logs/ 2>/dev/null || true
+        chmod -R 755 data/ logs/ 2>/dev/null || true
+    fi
+    echo -e "${GREEN}✅ Permisos configurados${NC}"
+    
     docker compose build --no-cache
     echo -e "${GREEN}✅ Imagen reconstruida${NC}"
 }
